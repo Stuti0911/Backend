@@ -17,7 +17,7 @@ const registerUser = asyncHandler(async(req,res)=>{
 
     const {userName,email,fullName,password}=req.body
     
-    console.log(req.body);
+    //console.log(req.body);
 
     if (userName.trim()=== "") {
         throw new ApiError(400,"Please enter a username");
@@ -38,14 +38,15 @@ const registerUser = asyncHandler(async(req,res)=>{
     //     throw new ApiError(400,"Field missing")
     // }
 
+    //console.log(req.files);
 
-    // const existedUser= User.findOne({
-    //     $or:[{ userName },{ email }]
-    // })
-    // if(existedUser){
-    //     console.log(existedUser);
-    //     throw new ApiError(409,"User already registed!!")
-    // }
+    const existedUser= await User.findOne({
+        $or:[{ userName },{ email }]
+    })
+    if(existedUser){
+        console.log(existedUser);
+        throw new ApiError(409,"User already registed!!")
+    }
 
     const avatarLocalPath=(req.files?.avatar[0]?.path);
     if(!avatarLocalPath){
@@ -56,9 +57,19 @@ const registerUser = asyncHandler(async(req,res)=>{
         throw new ApiError(500,"Uploading on Cloudinary failed")
     }
 
-    const coverImageLocalPath= req.files?.coverImage[0]?.path
-    const coverImageUploaded= await uploadOnCloudinary(coverImageLocalPath)
-
+    // const coverImageLocalPath= req.files?.coverImage[0]?.path
+    let coverImageLocalPath;
+    let coverImageUploaded;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length >0){
+        coverImageLocalPath=req.files.coverImage[0].path
+    }
+    if(coverImageLocalPath){
+        coverImageUploaded= await uploadOnCloudinary(coverImageLocalPath)
+    }
+    // coverImageUploaded= await uploadOnCloudinary(coverImageLocalPath) 
+    // if their is no cover image path cloudinary don't give error it will just return an empty string 
+    
+    
     const user= await User.create({
         fullName,
         userName,

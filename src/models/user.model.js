@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 
 const userSchema= new mongoose.Schema(
   {
-    username:{
+    userName:{
       type:String,
       required:true,
       unique:true,
@@ -88,5 +88,6 @@ userSchema.methods.generateRefreshToken= function(){
     )
 }
 //jwt:bearer token..jiske pass yeh hai mai usko data bhej dungi
+
 export const User= mongoose.model("User",userSchema)
 
