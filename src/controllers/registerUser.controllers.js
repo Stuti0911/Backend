@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
+import { json } from "express";
 
 const generateAccessAndRefreshToken = async (userid)=>
 {
@@ -258,11 +259,192 @@ const refreshAccessToken = asyncHandler(async(req,res)=>{
     }
 })
 
+const changePassword= asyncHandler(async(req,res)=>{
+    //User will give a old password and new password
+    //cookies se u get refresh token and from that id of user => if logged in then only pass change ho skta hai...=>verifyJWT ko explicitly ko call krne ki need nahi hogi..login k tym hi call ho jaata h
+    //verify old password
+    //check the validation of new password
+    //update in database
+    const {oldPassword,newPassword} = req.body
+    
+    const user=await User.findById(req.user?._id);
+   
+    if(oldPassword.trim()===""){
+        throw new ApiError(400,"Old Password is empty!!")
+    }
 
+    if(!(await user.isPasswordCorrect(oldPassword))){
+        throw new ApiError(400,"Old Password is wrong")
+    }
+    
+    if(newPassword.trim()==""){
+        throw new ApiError(400,"New Password is empty!!")
+    }
+    if(newPassword.length<8){
+        throw new ApiError(400,"Password is less than 8 character");
+    }
+
+    user.password=newPassword;
+    await user.save({validateBeforeSave:false});
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {},
+            "Password updated successfully"
+        )
+    )
+})
+
+const getCurrentUser = asyncHandler(async(req,res)=>{
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            req.user,
+            "User details sent"
+        )
+    )
+})
+
+const updateFullName=asyncHandler(async(req,res)=>{
+    //username,fullname
+    const {fullName}= req.body
+    
+    if(!fullName){
+        throw new ApiError(400,"Feild is empty!!")
+    }
+
+    const user=await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                fullName
+            }
+        },
+        {new:true}
+    ).select("-password")
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "fullName updated!"
+        )
+    )
+
+})
+
+const updateUserName=asyncHandler(async(req,res)=>{
+    //username,fullname
+    const {userName}= req.body
+    
+    if(!userName){
+        throw new ApiError(400,"Feild is empty!!")
+    }
+    console.log(userName);
+    const user=await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                userName:userName
+            }
+        },
+        {new:true}
+    ).select("-password")
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "userName updated!!"
+        )
+    )
+
+})
+
+const updateCoverImage= asyncHandler( async(req,res)=>{
+    
+    const coverImageLocalPath= req.file.path;
+
+    if(!coverImageLocalPath){
+        throw new ApiError(400,"Please cover Image")
+    }
+
+    const uploadedImage= await uploadOnCloudinary(coverImageLocalPath)
+
+    if(!uploadedImage){
+        throw new ApiError(400,"Error while uploading on cloudinary")
+    }
+
+    const user=await  User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                coverImage: uploadedImage.url
+            }
+        },
+        {new:true}
+    ).select("-password -refeshtoken")
+    
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "CoverImage Successfully Uploaded!!"
+        )
+    )
+
+})
+
+const updateAvatar= asyncHandler( async(req,res)=>{
+    
+    const avatarLocalPath= req.file.path;
+
+    if(!avatarLocalPath){
+        throw new ApiError(400,"Please give avatar image")
+    }
+
+    const uploadedImage= await uploadOnCloudinary(avatarLocalPath)
+
+    if(!uploadedImage){
+        throw new ApiError(400,"Error while uploading on cloudinary")
+    }
+    
+    const user=await  User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                avatar: uploadedImage.url
+            }
+        },
+        {new:true}
+    ).select("-password -refeshtoken")
+    console.log(user);
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user,
+            "Avatar Successfully Uploaded!!"
+        )
+    )
+
+})
 export {
     registerUser,
     loginUser,
     logOutUser,
     deleteUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changePassword,
+    getCurrentUser,
+    updateFullName,
+    updateUserName,
+    updateCoverImage,
+    updateAvatar
 }
