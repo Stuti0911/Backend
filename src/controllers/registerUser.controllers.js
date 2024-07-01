@@ -5,7 +5,8 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
-import { json } from "express";
+import { json, response } from "express";
+import { v2 as cloudinary } from 'cloudinary';
 
 const generateAccessAndRefreshToken = async (userid)=>
 {
@@ -23,6 +24,15 @@ const generateAccessAndRefreshToken = async (userid)=>
     }
 }
 
+const delFromCloudinary= async(url)=>{
+    const public_id=url.split("/").pop().split(".")[0];
+    console.log(public_id);
+
+    cloudinary.api.delete_resources([public_id], 
+    { type: 'upload', resource_type: 'image' })
+  .then(()=>console.log("Previous stored image successfully deleted"))
+  .catch(()=>console.log("Error occured while deleting"))
+}
 const registerUser = asyncHandler(async(req,res)=>{
     //userschema object lekar details fill
     //validation - not empty
@@ -380,6 +390,11 @@ const updateCoverImage= asyncHandler( async(req,res)=>{
         throw new ApiError(400,"Error while uploading on cloudinary")
     }
 
+    const user2= await (User.findById(req.user?._id))
+    const url= user2.coverImage;
+    
+    delFromCloudinary(url);
+
     const user=await  User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -414,6 +429,11 @@ const updateAvatar= asyncHandler( async(req,res)=>{
     if(!uploadedImage){
         throw new ApiError(400,"Error while uploading on cloudinary")
     }
+
+    const user2= await (User.findById(req.user?._id))
+    const url= user2.avatar;
+    
+    delFromCloudinary(url);
     
     const user=await  User.findByIdAndUpdate(
         req.user?._id,
@@ -435,6 +455,82 @@ const updateAvatar= asyncHandler( async(req,res)=>{
     )
 
 })
+
+const getUserChannelProfile = asyncHandler(async(req,res)=>{
+   
+    const {userName}= req.params 
+    console.log(userName);
+    if(!userName?.trim()){
+        throw new ApiError(400,"Username is not given")
+    }
+
+    const channel= await User.aggregate([  //pipeline result: arrays-->objects
+        {
+            $match:{
+                userName: userName?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{ //no of subscriber
+                from: "subsciptions",
+                localField:"_id",
+                foreignField:"channel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from: "subsciptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{
+                    $size: "$subscribers"
+                },
+                channelsSubscribedToCount:{
+                    $size: "$subscribedTo"
+                },
+                isSubscribed:{
+                    $cond:{
+                        if:{$in: [req.user?._id,"$subscribers.subscriber"] },
+                        then:true,
+                        else:false
+                    }
+                }
+            }
+        },
+        {
+            $project:{
+                fullName:1,
+                userName:1,
+                avatar:1,
+                coverImage:1,
+                channelsSubscribedToCount:1,
+                subscribersCount:1,
+                isSubscribed:1
+            }
+        }
+    ])
+    
+    if(!channel?.length){
+        throw new ApiError(404,"Channel does not exist");
+    }
+    console.log(channel);  //return: array 
+
+    return res.status(200)
+    .json(
+        new ApiResponse(
+            200,
+            channel[0],
+            "User channel fetched successfully"
+        )
+    )
+})
+
 export {
     registerUser,
     loginUser,
@@ -446,5 +542,6 @@ export {
     updateFullName,
     updateUserName,
     updateCoverImage,
-    updateAvatar
+    updateAvatar,
+    getUserChannelProfile
 }
