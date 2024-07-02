@@ -1,7 +1,7 @@
 import {asyncHandler} from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js";
 import {User} from "../models/user.model.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, delFromCloudinary } from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
@@ -25,15 +25,6 @@ const generateAccessAndRefreshToken = async (userid)=>
     }
 }
 
-const delFromCloudinary= async(url)=>{
-    const public_id=url.split("/").pop().split(".")[0];
-    console.log(public_id);
-
-    cloudinary.api.delete_resources([public_id], 
-    { type: 'upload', resource_type: 'image' })
-  .then(()=>console.log("Previous stored image successfully deleted"))
-  .catch(()=>console.log("Error occured while deleting"))
-}
 const registerUser = asyncHandler(async(req,res)=>{
     //userschema object lekar details fill
     //validation - not empty

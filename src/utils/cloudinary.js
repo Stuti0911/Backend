@@ -8,6 +8,16 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const delFromCloudinary= async(url)=>{
+    const public_id=url.split("/").pop().split(".")[0];
+    console.log(public_id);
+
+    cloudinary.api.delete_resources([public_id], 
+    { type: 'upload', resource_type: 'image' })
+  .then(()=>console.log("Previous stored file successfully deleted"))
+  .catch(()=>console.log("Error occured while deleting"))
+}
+
 const uploadOnCloudinary = async(localFilePath)=>{
     try {
         if(!localFilePath) return `Couldn't find the Path`
@@ -26,6 +36,6 @@ const uploadOnCloudinary = async(localFilePath)=>{
     }
 }
 
-export {uploadOnCloudinary}
+export {uploadOnCloudinary,delFromCloudinary}
     
    
