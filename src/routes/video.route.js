@@ -3,9 +3,9 @@ import{publishVideo,getVideoById,updateVideo,updateThumbnail,deleteVideo} from "
 import { upload} from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/authentication.middleware.js";
 const router= Router();
+router.use(verifyJWT); //apply in everything
 
 router.route("/publishVideo").post(
-    verifyJWT,
     upload.fields([
         {
             name:"videoFile",

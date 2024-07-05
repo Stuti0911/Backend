@@ -167,6 +167,17 @@ const deleteVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400,"Not a valid Video")
     }
     // del image and vdo from cloud
+   //// console.log(videoId);
+    const videoToBeDel= await Video.findById(videoId);
+   // console.log(videoToBeDel);
+    const urlThumbnail=videoToBeDel.thumbnail
+    const urlvideoFile=videoToBeDel.videoFile
+    if(delFromCloudinary(urlThumbnail)){
+        console.log("Thumbnail deleted from cloudinary");
+    }
+    if(delFromCloudinary(urlvideoFile)){
+        console.log("VideoFile deleted from cloudinary");
+    }
     await Video.deleteOne({
         _id:videoId
     })
