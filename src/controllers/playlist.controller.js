@@ -8,9 +8,11 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 // add vdo to playlist 
 // remove video
 //edit name,descrption
+//delete playlist
+
 //get userplaylist
 //playlist by id
-//delete playlist
+
 
 const createPlaylist= asyncHandler(async(req,res)=>{
     //name,desc,owner:req.user,videos
@@ -160,6 +162,27 @@ const updatedPlaylistDetails = asyncHandler(async(req,res)=>{
     .json(new ApiResponse(200,upatedDetails,"Playlist details updated Successfully!!"))
 })
 
+const deletePlaylist = asyncHandler(async(req,res)=>{
+    const {playlistId}= req.params;
+
+    const playlist= await Playlist.findById(playlistId);
+
+    if(!playlist){
+        throw new ApiError(400,"Playlist does not exist");
+    }
+
+    await Playlist.deleteOne({
+        _id:new mongoose.Types.ObjectId(playlistId)
+    });
+
+    return res.status(200)
+    .json(new ApiResponse(
+        200,
+        {},
+        "Playlist Successfully deleted!!"
+    ))
+})
+
 const getPlaylistById= asyncHandler(async(req,res)=>{
     const {playlistId}= req.params
 
@@ -167,11 +190,16 @@ const getPlaylistById= asyncHandler(async(req,res)=>{
         throw new ApiError(400,"Playlist doesnot exist")
     }
     //video=> thumbnail, title description,ownername
-    const playlist=await Playlist.aggregate([
+    console.log(playlistId);
+    
+    const playlist= await Playlist.aggregate([
         {
-            $match:{
-                _id:playlistId
+            $match: {
+                _id: new mongoose.Types.ObjectId(playlistId)
             }
+        },
+        {
+            $unwind:"$videos"
         },
         {
             $lookup:{
@@ -184,12 +212,35 @@ const getPlaylistById= asyncHandler(async(req,res)=>{
     ])
 
     console.log(playlist);
+    return res.json(new ApiResponse(200,playlist,"sjs"))
 })
 
+const getUserPlaylist= asyncHandler(async(req,res)=>{
+    const user= req.user?._id;
+
+    const playlist= await Playlist.find({
+        owner:user
+    })
+
+    if(!playlist){
+        return res.status(200)
+        .json(
+            new ApiResponse(200,{},"You have not created any playlist")
+        )
+    }
+    
+    return res.status(200)
+    .json(
+        new ApiResponse(200,playlist,"User Playlist returned Successfully")
+    )
+
+})
 export{
     createPlaylist,
     addVdoToPlaylist,
     removeVdoFromPlaylist,
     updatedPlaylistDetails,
-    getPlaylistById
+    getPlaylistById,
+    deletePlaylist,
+    getUserPlaylist
 }
