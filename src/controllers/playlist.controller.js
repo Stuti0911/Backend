@@ -199,14 +199,23 @@ const getPlaylistById= asyncHandler(async(req,res)=>{
             }
         },
         {
-            $unwind:"$videos"
-        },
-        {
             $lookup:{
                 from:"videos",
                 localField:"videos",
                 foreignField:"_id",
                 as:"video"
+            }
+        },
+        {
+            $project:{
+                _id:1,
+                name:1,
+                description:1,
+                owner:1,
+                "video._id":1,
+                "video.thumbnail":1,
+                "video.owner":1,
+                "video.description":1
             }
         }
     ])
@@ -218,17 +227,75 @@ const getPlaylistById= asyncHandler(async(req,res)=>{
 const getUserPlaylist= asyncHandler(async(req,res)=>{
     const user= req.user?._id;
 
-    const playlist= await Playlist.find({
+    const checkPlaylist= await Playlist.find({
         owner:user
     })
 
-    if(!playlist){
+    if(!checkPlaylist){
         return res.status(200)
         .json(
             new ApiResponse(200,{},"You have not created any playlist")
         )
     }
     
+    const playlist= await Playlist.aggregate([
+        {
+            $match: {
+                owner: new mongoose.Types.ObjectId(user)
+            }
+        },
+        {
+            $lookup:{
+                from:"videos",
+                localField:"videos",
+                foreignField:"_id",
+                as:"video",
+                pipeline:[
+                    {
+                        $lookup:{
+                            from:"users",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner"
+                        },
+                    },
+                    // {
+                    //     $project:{
+                    //         "video.thumbnail":1,
+                    //         "owner.userName":1,
+                    //         "owner.avatar":1,
+                    //         "owner.fullName":1
+                    //     }
+                    // },
+                    {
+                        $addFields:{
+                            "owner":{
+                                $arrayElemAt:[
+                                    "$owner",0
+                                ]
+                            }
+                        }
+                    }
+                ],
+               
+            }
+        },
+        {
+            $project:{
+                _id:1,
+                name:1,
+                description:1,
+                owner:1,
+                "video._id":1,
+                "video.thumbnail":1,
+                "video.owner":1,
+                "video.description":1,
+                //"video.owner.fullName":1
+               
+            }
+        }
+    ])
+
     return res.status(200)
     .json(
         new ApiResponse(200,playlist,"User Playlist returned Successfully")

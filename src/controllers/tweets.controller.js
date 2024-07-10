@@ -4,10 +4,6 @@ import { ApiError } from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-//create tweet
-//delete
-//update
-//get user tweet
 
 const createTweet = asyncHandler(async(req,res)=>{
     const {content} = req.body;
